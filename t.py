@@ -7,17 +7,24 @@ import time
 import os
 import torchvision.transforms as transforms
 import json
-from data import d
 import random
+import os
+import pandas as pd
 
-#JSON 불러오기
+#graph 
+import matplotlib.pyplot as plt
+
+#JSON
 with open('C:/Users/jeonghyeon/algorithem/Vocabulary.json', 'r', encoding='utf-8') as f:
     vocab = json.load(f)
-token_id_list = list(vocab.values())
+token_id_list = tuple(vocab.values())
 
 with open('C:/Users/jeonghyeon/algorithem/revocabulary.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
     print(data)
+
+with open('idx.json', 'r', encoding='utf-8') as f:
+    idx = json.load(f)
 
 idx_to_token = list(vocab.keys())  
 word_count = len(idx_to_token)  
@@ -69,17 +76,24 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
+if os.path.exists("C:/Users/jeonghyeon/algorithem/p1.pth"):
+    model1.load_state_dict(torch.load("C:/Users/jeonghyeon/algorithem/p1.pth"))
+    print ("가중치 불러옴")
+else:
+    print("가중치 불러오기 실패")
 
-idx = {"idx1" : (0,1,2,3,4,5,6,7), "idx2" : (0,1,8,9,9,4,5,6,7), "idx3" : (0,1,10,11,4,5,6,7)}
-count=0
+df = pd.read_csv('C:/Users/jeonghyeon/algorithem/project/captions.txt')
+
+loss_history = []  # loss 값 저장할 리스트
+
+start = time.time()
 for epoch in range(100):
-    order = [1, 2, 3]
-    random.shuffle(order)
-    for count in (order):
-        img = Image.open(f"C:/Users/jeonghyeon/Desktop/다운로드 ({count}).jpg").convert("RGB")
+    df = df.sample(frac=1).reset_index(drop=True)  ###############################
+    for i, row in df.iterrows():
+        img = Image.open(f"C:/Users/jeonghyeon/algorithem/project/Images/{row['image']}").convert("RGB")###  thank you for ai!!!!!!
         img = transform(img).unsqueeze(0)
-        final_token_index = torch.tensor([0], dtype=torch.long) # 만들때 테스트 한거 & 처음 시작 할때 입력값   
-        for y in idx[f"idx{count}"]:
+        final_token_index = torch.tensor([0], dtype=torch.long)
+        for y in idx[f"idx{i}"]:
             optimizer.zero_grad()
             label = torch.tensor([y], dtype=torch.long)
             output1 = model1(img,final_token_index)# 각 단어의 확률
@@ -90,6 +104,20 @@ for epoch in range(100):
             final_token_index = torch.tensor([y], dtype=torch.long)#가장 높은 확률의 단어의 인덱스 값을 파이트로치 형식으로 바꾼값
             loss = CrossEntropyLoss(output1, label)
             loss.backward()
+
+            loss_history.append(loss.item())  # loss 값 저장 graph
+
             optimizer.step()
-            print(f"정답: {idx_to_token[y]}  |  예측: {idx_to_token[index]} | loss:{loss}")
-        torch.save(model1.state_dict(),"p1.pth")
+            end = time.time()
+            print(f"정답: {idx_to_token[y]}  |  예측: {idx_to_token[index]} | loss:{loss} | epoch : {epoch} | time : {end - start:.2f} | {i} image")
+    torch.save(model1.state_dict(),"p1.pth")
+
+# 그래프 그리기
+    plt.figure(figsize=(10, 5))
+    plt.plot(loss_history)
+    plt.title('Training Loss')
+    plt.xlabel('Step')
+    plt.ylabel('Loss')
+    plt.savefig('loss_graph.png')  # 이미지로 저장
+    plt.close()  # 메모리 해제 (중요!)
+    print(f"epoch {epoch} 그래프 저장 완료")

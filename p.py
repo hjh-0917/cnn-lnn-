@@ -9,7 +9,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 vocab_path = 'C:/Users/jeonghyeon/algorithem/Vocabulary.json'
 model_path = 'C:/Users/jeonghyeon/algorithem/p1.pth'
-test_image_path = "C:/Users/jeonghyeon/Desktop/다운로드 (3).jpg"
+test_image_path = "C:/Users/jeonghyeon/Desktop/다운로드 (2).jpg"
 
 with open(vocab_path, 'r', encoding='utf-8') as f:
     vocab = json.load(f)
@@ -60,26 +60,27 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-def predict_caption(image_path, max_length=10):
+def predict_caption(image_path, max_length=10000):
     img = Image.open(image_path).convert("RGB")
     img = transform(img).unsqueeze(0).to(device)
 
     current_token_index = torch.tensor([0], dtype=torch.long).to(device)
-    result = []
+
+    print("예측 결과: ", end="", flush=True)
 
     with torch.no_grad():
         for _ in range(max_length):
             output = model(img, current_token_index)
             predict_id = output.argmax().item()
             predict_word = idx_to_token[predict_id]
-            result.append(predict_word)
-            current_token_index = torch.tensor([predict_id], dtype=torch.long).to(device)
+
             if predict_word == "SEP":
+                print()  # 줄바꿈
                 break
 
-    return " ".join(result)
+            print(predict_word, end=" ", flush=True)
+            current_token_index = torch.tensor([predict_id], dtype=torch.long).to(device)
 
 if __name__ == "__main__":
-    result = predict_caption(test_image_path)
     print(f"입력 이미지: {os.path.basename(test_image_path)}")
-    print(f"예측 결과: {result}")
+    predict_caption(test_image_path)

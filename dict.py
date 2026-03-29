@@ -1,30 +1,32 @@
-''' 글 데이터와 이미지 데이터는 따로 저장  이미지 100장 글 데이터 100장'''
-dict = {}
-redict = {}
-from data import d
+# 수정: captions.txt 전체로 vocab 만들기
+import pandas as pd
 from transformers import AutoTokenizer
 import json
+
+df = pd.read_csv('C:/Users/jeonghyeon/algorithem/project/captions.txt')  # Flickr8k captions.txt
 tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
-for i in range(3):
-    data = d[i]
-    tokens = tokenizer.tokenize(data)
-    token_ids = tokenizer.encode(data)
-    len_token = (len(tokens))
-    dict["CLS"]=token_ids[0]
+
+dict = {}
+redict = {}
+
+for caption in df['caption']:  # 모든 캡션 순회
+    tokens = tokenizer.tokenize(caption)
+    token_ids = tokenizer.encode(caption)
+    
+    dict["CLS"] = token_ids[0]
     redict[token_ids[0]] = "CLS"
-    for _ in range (len_token):
-        o = _ + 1
-        dict[tokens[_]]=token_ids[o]
-        redict[token_ids[o]]=tokens[_]
-    dict["SEP"]= token_ids[len_token + 1]
-    redict[token_ids[len_token + 1]] = "SEP"
-print (dict)
-print(redict)
+    
+    for i, token in enumerate(tokens):
+        dict[token] = token_ids[i+1]
+        redict[token_ids[i+1]] = token
+    
+    dict["SEP"] = token_ids[-1]
+    redict[token_ids[-1]] = "SEP"
 
 with open('Vocabulary.json', 'w', encoding='utf-8') as f:
-    json.dump(dict,f, ensure_ascii=False, indent=4)
+    json.dump(dict, f, ensure_ascii=False, indent=4)
 with open('revocabulary.json', 'w', encoding='utf-8') as f:
-    json.dump(redict,f, ensure_ascii=False, indent=4)
+    json.dump(redict, f, ensure_ascii=False, indent=4)
 
 
     
